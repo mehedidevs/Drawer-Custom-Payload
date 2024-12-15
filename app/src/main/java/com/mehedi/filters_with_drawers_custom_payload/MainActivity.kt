@@ -157,7 +157,67 @@ class MainActivity : AppCompatActivity() {
                     )
                 )
             ),
-            // Additional filter categories...
+            
+            // Size Filter Category
+            FilterCategory(
+                id = "sizes",
+                name = "Sizes",
+                items = listOf(
+                    FilterItem(
+                        id = "size_filter",
+                        title = "Available Sizes",
+                        type = FilterType.SIZE,
+                        data = listOf(
+                            SizeData("S", "Small"),
+                            SizeData("M", "Medium"),
+                            SizeData("L", "Large"),
+                            SizeData("XL", "Extra Large"),
+                            SizeData("XXL", "Double Extra Large")
+                        )
+                    )
+                )
+            ),
+            
+            // Price Range Filter Category
+            FilterCategory(
+                id = "price_range",
+                name = "Price Range",
+                items = listOf(
+                    FilterItem(
+                        id = "price_filter",
+                        title = "Price Range",
+                        type = FilterType.PRICE_RANGE,
+                        data = PriceRangeData(
+                            minPrice = 0.0f,
+                            maxPrice = 1000.0f,
+
+                        )
+                    )
+                )
+            ),
+            
+            // Category (Checkbox) Filter
+            FilterCategory(
+                id = "categories",
+                name = "Categories",
+                items = listOf(
+                    FilterItem(
+                        id = "category_filter",
+                        title = "Product Categories",
+                        type = FilterType.CHECKBOX,
+                        data = listOf(
+                            "Electronics",
+                            "Clothing",
+                            "Books",
+                            "Home & Garden",
+                            "Sports & Outdoors",
+                            "Toys & Games",
+                            "Beauty & Personal Care",
+                            "Automotive"
+                        )
+                    )
+                )
+            )
         )
     }
 
