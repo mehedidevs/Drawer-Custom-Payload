@@ -16,21 +16,29 @@ import com.mehedi.filters_with_drawers_custom_payload.factory.FilterHandlerFacto
 
 // Main Activity
 class MainActivity : AppCompatActivity() {
+    // View Binding instance for accessing layout views
     private lateinit var binding: ActivityMainBinding
+    
+    // UI Components
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var filterRecyclerView: RecyclerView
     private var filterAdapter: FilterAdapter? = null
-    private val filterManager = FilterManager
-    private lateinit var filterHandlerFactory: FilterHandlerFactory
-    private lateinit var filters: List<FilterCategory>
+    
+    // Filter Management Components
+    private val filterManager = FilterManager  // Singleton object that handles filter state
+    private lateinit var filterHandlerFactory: FilterHandlerFactory  // Factory for creating filter handlers
+    private lateinit var filters: List<FilterCategory>  // List of all available filters
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        filters = createSampleFilters()
-        filterHandlerFactory = FilterHandlerFactory(filterManager)
+        // Initialize components
+        filters = createSampleFilters()  // Create sample filter data
+        filterHandlerFactory = FilterHandlerFactory(filterManager)  // Initialize factory with filter manager
+        
+        // Setup UI components
         setupDrawer()
         setupFilters()
         setupFilterButton()
@@ -39,17 +47,18 @@ class MainActivity : AppCompatActivity() {
     private fun setupDrawer() {
         drawerLayout = binding.drawerLayout
 
-        // Setup toolbar
+        // Configure toolbar with drawer toggle
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_menu)
     }
 
     private fun setupFilters() {
+        // Setup RecyclerView for filters
         filterRecyclerView = binding.filterRecyclerView
         filterRecyclerView.layoutManager = LinearLayoutManager(this)
 
-
+        // Add listener to monitor filter changes
         FilterManager.addListener { filters ->
             Log.d("Filters", "Filter state updated: ${filters.size} filters")
             filters.forEach { (id, filter) ->
@@ -57,24 +66,76 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-
         buildAdapter()
-
-
     }
 
     private fun buildAdapter() {
+        // Create new adapter instance to avoid state issues
         filterAdapter = null
         filterAdapter = FilterAdapter(
-            categories = filters,
-            onFilterChanged = { filter -> handleFilter(filter) },
-            filterHandlerFactory = filterHandlerFactory,
-            filterOperations = filterManager
+            categories = filters,  // List of filter categories
+            onFilterChanged = { filter -> handleFilter(filter) },  // Callback for filter changes
+            filterHandlerFactory = filterHandlerFactory,  // Factory for creating handlers
+            filterOperations = filterManager  // Operations for managing filters
         )
 
         filterRecyclerView.adapter = filterAdapter
     }
 
+    private fun setupFilterButton() {
+        // Configure navigation drawer toggle
+        binding.toolbar.setNavigationOnClickListener {
+            drawerLayout.openDrawer(GravityCompat.END)
+        }
+
+        // Setup apply filters button
+        binding.applyFiltersButton.setOnClickListener {
+            applyFilters()  // Apply current filters
+            drawerLayout.closeDrawer(GravityCompat.END)  // Close drawer
+        }
+
+        // Setup clear filters button
+        binding.clearFiltersButton.setOnClickListener {
+            filterManager.clearFilters()  // Clear all filters
+            filterAdapter?.clearSelections()  // Clear UI selections
+            Snackbar.make(
+                binding.root,
+                "All filters cleared",
+                Snackbar.LENGTH_SHORT
+            ).show()
+            buildAdapter()  // Rebuild adapter to reflect cleared state
+        }
+    }
+
+    private fun handleFilter(filter: FilterItem) {
+        // Create appropriate handler for filter type and handle the filter
+        val handler = filterHandlerFactory.createHandler(filter.type)
+        handler.handleFilter(filter)
+    }
+
+    private fun applyFilters() {
+        // Get current active filters
+        val activeFilters = FilterManager.getActiveFilters()
+
+        // Create payload for API call
+        val payload = FilterPayload(
+            keyword = "binding.searchEditText.text?.toString() " ?: "",
+            categorySlug = "furniture-appliances-18",  // Category identifier
+            filters = activeFilters.toMutableList(),
+            sortBy = "relevance"  // Default sort option
+        )
+
+        // Log filter application for debugging
+        Log.d("Filters", "Applying filters: ${payload.filters.size} filters")
+        payload.filters.forEach { filter ->
+            Log.d("Filters", "Filter: ${filter.id}, Content: ${filter.content.size} items")
+        }
+        Log.d("Filters", "payload: $payload")
+
+        // TODO: Make API call with payload
+    }
+
+    // Sample data creation for testing
     private fun createSampleFilters(): List<FilterCategory> {
         return listOf(
             // Color Filter Category
@@ -96,135 +157,21 @@ class MainActivity : AppCompatActivity() {
                     )
                 )
             ),
-            // Size Filter Category
-            FilterCategory(
-                id = "sizes",
-                name = "Sizes",
-                items = listOf(
-                    FilterItem(
-                        id = "size_filter",
-                        title = "Available Sizes",
-                        type = FilterType.SIZE,
-                        data = listOf(
-                            SizeData("Small", "S"),
-                            SizeData("Medium", "M"),
-                            SizeData("Large", "L"),
-                            SizeData("X-Large", "XL")
-                        )
-                    )
-                )
-            ),
-            // Price Range Filter Category
-            FilterCategory(
-                id = "price",
-                name = "Price Range",
-                items = listOf(
-                    FilterItem(
-                        id = "price_filter",
-                        title = "Select Price Range",
-                        type = FilterType.PRICE_RANGE,
-                        data = PriceRangeData(0f, 1000f)
-                    )
-                )
-            ),
-            // Category Filter
-            FilterCategory(
-                id = "categories",
-                name = "Categories",
-                items = listOf(
-                    FilterItem(
-                        id = "category_filter",
-                        title = "Product Categories",
-                        type = FilterType.CHECKBOX,
-                        data = listOf(
-                            "Electronics",
-                            "Clothing",
-                            "Books",
-                            "Home & Kitchen"
-                        )
-                    )
-                )
-            )
+            // Additional filter categories...
         )
     }
 
-
-    private fun setupFilterButton() {
-        binding.toolbar.setNavigationOnClickListener {
-            drawerLayout.openDrawer(GravityCompat.END)
-        }
-
-        // Setup apply filters button
-        binding.applyFiltersButton.setOnClickListener {
-            applyFilters()
-            drawerLayout.closeDrawer(GravityCompat.END)
-        }
-
-        // Setup clear filters button
-        binding.clearFiltersButton.setOnClickListener {
-            filterManager.clearFilters()
-            filterAdapter?.clearSelections()
-            Snackbar.make(
-                binding.root,
-                "All filters cleared",
-                Snackbar.LENGTH_SHORT
-            ).show()
-            buildAdapter()
-
-        }
-    }
-
-    private fun handleFilter(filter: FilterItem) {
-        val handler = filterHandlerFactory.createHandler(filter.type)
-        handler.handleFilter(filter)
-    }
-
-    // Update your Activity's applyFilters method
-    private fun applyFilters() {
-        val activeFilters = FilterManager.getActiveFilters()
-
-        val payload = FilterPayload(
-            keyword = "binding.searchEditText.text?.toString() " ?: "",
-            categorySlug = "furniture-appliances-18",  // Get this from your current category
-            filters = activeFilters.toMutableList(),
-            sortBy = "relevance"  // Update this based on user's sort selection
-        )
-
-        Log.d("Filters", "Applying filters: ${payload.filters.size} filters")
-        payload.filters.forEach { filter ->
-            Log.d("Filters", "Filter: ${filter.id}, Content: ${filter.content.size} items")
-        }
-        Log.d("Filters", "payload: $payload")
-
-        // Make your API call with the payload
-        // viewModel.applyFilters(payload)
-    }
-
-
+    // Helper methods for API interaction
     private fun makeApiCall(payload: FilterPayload) {
-        // Implementation of API call
-        /* viewModelScope.launch {
-             try {
-                 // Example API call
-                 val response = api.applyFilters(payload)
-                 // Handle response
-                 handleApiResponse(response)
-             } catch (e: Exception) {
-                 // Handle error
-                 handleError(e)
-             }
-         }*/
+        // TODO: Implement API call
     }
 
     private fun handleApiResponse(response: Any) {
-        // Update UI with filtered results
-        // Example:
-        /*       binding.productRecyclerView.submitList(response.products)
-               binding.totalResults.text = "${response.totalResults} results found"*/
+        // TODO: Handle API response
     }
 
     private fun handleError(error: Exception) {
-        // Show error message
+        // Show error message to user
         Snackbar.make(
             binding.root,
             "Error applying filters: ${error.localizedMessage}",
