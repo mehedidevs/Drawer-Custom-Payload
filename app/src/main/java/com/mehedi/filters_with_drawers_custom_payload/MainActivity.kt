@@ -1,5 +1,7 @@
 package com.mehedi.filters_with_drawers_custom_payload
 
+
+import FilterOperations
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -9,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.mehedi.filters_with_drawers_custom_payload.databinding.ActivityMainBinding
+import com.mehedi.filters_with_drawers_custom_payload.factory.FilterHandlerFactory
 
 
 // Main Activity
@@ -18,14 +21,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var filterRecyclerView: RecyclerView
     private var filterAdapter: FilterAdapter? = null
     private val filterManager = FilterManager
+    private lateinit var filterHandlerFactory: FilterHandlerFactory
+    private lateinit var filters: List<FilterCategory>
 
-    // Create sample filter data
-    val filters = createSampleFilters()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        filters = createSampleFilters()
+        filterHandlerFactory = FilterHandlerFactory(filterManager)
         setupDrawer()
         setupFilters()
         setupFilterButton()
@@ -60,16 +65,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun buildAdapter() {
         filterAdapter = null
-        filterAdapter = FilterAdapter(filters) { filter ->
-            // Handle filter changes
-            when (filter.type) {
-                FilterType.COLOR -> handleColorFilter(filter)
-                FilterType.SIZE -> handleSizeFilter(filter)
-                FilterType.PRICE_RANGE -> handlePriceFilter(filter)
-                FilterType.CHECKBOX -> handleCheckboxFilter(filter)
-                FilterType.RADIO -> handleRadioFilter(filter)
-            }
-        }
+        filterAdapter = FilterAdapter(
+            categories = filters,
+            onFilterChanged = { filter -> handleFilter(filter) },
+            filterHandlerFactory = filterHandlerFactory,
+            filterOperations = filterManager
+        )
 
         filterRecyclerView.adapter = filterAdapter
     }
@@ -173,112 +174,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleColorFilter(filter: FilterItem) {
-        val colorData = filter.data as List<ColorData>
-        colorData.forEach { color ->
-            val filterContent = FilterContent(
-                id = color.colorName,
-                title = color.colorName,
-                color = color.hexCode,
-                icon = null
-            )
-
-            val colorFilter = Filter(
-                id = "color_filter",
-                title = "Colors",
-                from = "ATTRIBUTE",
-                type = "single_select",
-                content = listOf(filterContent)
-            )
-
-            filterManager.updateFilter(colorFilter)
-        }
-    }
-
-    private fun handleSizeFilter(filter: FilterItem) {
-        val sizeData = filter.data as List<SizeData>
-        sizeData.forEach { size ->
-            val filterContent = FilterContent(
-                id = size.sizeCode,
-                title = size.sizeName,
-                color = null,
-                icon = null
-            )
-
-            val sizeFilter = Filter(
-                id = "size_filter",
-                title = "Sizes",
-                from = "ATTRIBUTE",
-                type = "single_select",
-                content = listOf(filterContent)
-            )
-
-            filterManager.updateFilter(sizeFilter)
-        }
-    }
-
-    private fun handlePriceFilter(filter: FilterItem) {
-        val priceData = filter.data as PriceRangeData
-        val filterContent = FilterContent(
-            id = "price_range",
-            title = "₹${priceData.minPrice} - ₹${priceData.maxPrice}",
-            color = null,
-            icon = null
-        )
-
-        val priceFilter = Filter(
-            id = "price_filter",
-            title = "Price Range",
-            from = "ATTRIBUTE",
-            type = "range",
-            content = listOf(filterContent)
-        )
-
-        filterManager.updateFilter(priceFilter)
-    }
-
-    private fun handleCheckboxFilter(filter: FilterItem) {
-        val categories = filter.data as List<String>
-        val filterContents = categories.map { category ->
-            FilterContent(
-                id = category.lowercase().replace(" ", "_"),
-                title = category,
-                color = null,
-                icon = null
-            )
-        }
-
-        val categoryFilter = Filter(
-            id = "category_filter",
-            title = "Categories",
-            from = "ATTRIBUTE",
-            type = "multi_select",
-            content = filterContents
-        )
-
-        filterManager.updateFilter(categoryFilter)
-    }
-
-    private fun handleRadioFilter(filter: FilterItem) {
-        val options = filter.data as List<String>
-        val filterContents = options.map { option ->
-            FilterContent(
-                id = option.lowercase().replace(" ", "_"),
-                title = option,
-                color = null,
-                icon = null
-            )
-        }
-
-        val radioFilter = Filter(
-            id = filter.id,
-            title = filter.title,
-            from = "ATTRIBUTE",
-            type = "single_select",
-            content = filterContents
-        )
-
-        filterManager.updateFilter(radioFilter)
+    private fun handleFilter(filter: FilterItem) {
+        val handler = filterHandlerFactory.createHandler(filter.type)
+        handler.handleFilter(filter)
     }
 
     // Update your Activity's applyFilters method

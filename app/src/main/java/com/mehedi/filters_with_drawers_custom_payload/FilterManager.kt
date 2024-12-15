@@ -1,18 +1,16 @@
 package com.mehedi.filters_with_drawers_custom_payload
 
+import FilterOperations
 import android.util.Log
 
-object FilterManager {
+object FilterManager : FilterOperations {
     private val filters = mutableMapOf<String, Filter>()
     private val listeners = mutableListOf<(Map<String, Filter>) -> Unit>()
 
-    // Update or add a new filter
-    fun updateFilter(filter: Filter) {
-        // For single select filters, we keep only one content item
+    override fun updateFilter(filter: Filter) {
         if (filter.type == "single_select") {
             filters[filter.id] = filter
         } else {
-            // For multi-select, we merge the content with existing filter
             val existingFilter = filters[filter.id]
             if (existingFilter != null) {
                 val mergedContent = (existingFilter.content + filter.content).distinctBy { it.id }
@@ -24,8 +22,7 @@ object FilterManager {
         notifyListeners()
     }
 
-    // Remove a specific content item from a filter
-    fun removeFilterContent(filterId: String, contentId: String) {
+    override fun removeFilterContent(filterId: String, contentId: String) {
         filters[filterId]?.let { filter ->
             val updatedContent = filter.content.filterNot { it.id == contentId }
             if (updatedContent.isEmpty()) {
@@ -37,33 +34,26 @@ object FilterManager {
         }
     }
 
-    fun clearFilters() {
+    override fun clearFilters() {
         filters.clear()
         notifyListeners()
     }
 
-    fun getActiveFilters(): List<Filter> = filters.values.toList()
+    override fun getActiveFilters(): List<Filter> = filters.values.toList()
 
-    // Add a listener
-    fun addListener(listener: (Map<String, Filter>) -> Unit) {
+    override fun addListener(listener: (Map<String, Filter>) -> Unit) {
         listeners.add(listener)
-        // Notify immediately of current state
         listener(filters)
     }
 
-    // Remove a listener
-    fun removeListener(listener: (Map<String, Filter>) -> Unit) {
+    override fun removeListener(listener: (Map<String, Filter>) -> Unit) {
         listeners.remove(listener)
     }
 
-    // Notify all listeners of changes
     private fun notifyListeners() {
-        listeners.forEach { listener ->
-            listener(filters)
-        }
+        listeners.forEach { it(filters) }
     }
 
-    // Debug method to log current state
     fun logCurrentState() {
         Log.d("FilterManager", "Current filters: ${filters.size}")
         filters.forEach { (id, filter) ->
@@ -92,9 +82,3 @@ data class Filter(
     val content: List<FilterContent>
 )
 
-data class FilterContent(
-    val id: String,
-    val title: String,
-    val color: String?,
-    val icon: String?
-)

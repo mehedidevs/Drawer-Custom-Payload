@@ -22,10 +22,7 @@ enum class FilterType {
     RADIO
 }
 
-data class ColorData(
-    val colorName: String,
-    val hexCode: String
-)
+
 
 data class SizeData(
     val sizeName: String,
